@@ -8,7 +8,8 @@ Created on Thu Aug 22 11:25:11 2019
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
+import os
+os.chdir('C:\\Users\\jaideep.whabi\\IEEE-Fraud-Detection-Repo')
 
 df1=pd.read_csv("C:\\Users\\jaideep.whabi\\ieee-fraud-detection\\train_transaction.csv")
 
@@ -55,7 +56,22 @@ sum(missing_data["Percent Missing"]<50)
 
 for i in data.select_dtypes(include=['category']).columns:
    #if( data[i].dtype.name=='category'):
-       data[i].hist()
-       plt.save(i + ".png")
-       plt.close()
-       print(i)
+   if(len(data[i].unique())>10 and i not in('P_emaildomain', 'R_emaildomain','id_30', 'id_31',
+       'id_32', 'id_33', 'id_34', 'id_35', 'id_36', 'id_37', 'id_38','DeviceInfo')):
+      
+       """-1000 for missing values in continous data"""
+       ax=data[i].replace(np.nan,-1000).hist()
+       print(1)
+       #np.histogram(data[i])
+   else:    
+       
+       ax=data[i].value_counts(dropna=False).plot(kind='bar')
+       print(2)
+   fig = ax.get_figure()
+   #plt.gcf().subplots_adjust(bottom=0.15)
+   plt.tight_layout()
+   fig.savefig(os.getcwd() + '\\Images\\' + i+'.png')
+   
+   plt.close(fig)    
+   print(i)
+   
