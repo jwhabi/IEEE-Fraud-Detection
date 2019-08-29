@@ -36,7 +36,7 @@ data.card4=data.card4.astype('category')
 data.card4=data.card4.cat.codes
 
 for i in data.columns:
-    data[i]=data[i].replace(np.nan,0)
+    #data[i]=data[i].replace(np.nan,0) # uncomment if using pca
     if(data[i].dtype=='object'):
         print(i,data[i].dtype)
         #data[i]=data[i].replace(np.nan,0)
@@ -50,7 +50,7 @@ train_X, test_X, train_Y, test_Y = train_test_split( data.drop('isFraud',axis=1)
 
 #X=data.drop('isFraud',axis=1)
 #Y=data['isFraud']
-
+"""
 scaler = StandardScaler()
 # Fit on training set only.
 scaler.fit(train_X)
@@ -68,9 +68,9 @@ pca.n_components_
 train_X = pca.transform(train_X)
 test_X = pca.transform(test_X)
 
-
-#principalDf.head()
 """
+#principalDf.head()
+""" DONOT USE
 clf = xgb.XGBClassifier(
     n_estimators=500,
     max_depth=9,
