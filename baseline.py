@@ -70,7 +70,7 @@ test_X = pca.transform(test_X)
 
 
 #principalDf.head()
-
+"""
 clf = xgb.XGBClassifier(
     n_estimators=500,
     max_depth=9,
@@ -81,6 +81,44 @@ clf = xgb.XGBClassifier(
 )
 
 clf.fit(train_X, train_Y)
+"""
+params = {'n_estimators':500,
+    'max_depth':9,
+    'learning_rate':0.05,
+    'subsample':0.9,
+    'colsample_bytree':0.9,
+    "eval_metric": "auc"}
+val_X=train_X[:10000]
+partial_train_X=train_X[10000:]
+val_Y=train_Y[:10000]
+partial_train_Y=train_Y[10000:]
+
+dtrain=xgb.DMatrix(partial_train_X,partial_train_Y)
+dval=xgb.DMatrix(val_X,val_Y)
+dtest=xgb.DMatrix(test_X)
+clf=xgb.train(params,dtrain,num_boost_round=10,early_stopping_rounds=50, evals=[(dtrain,'train'),(dval,'test')],verbose_eval=True)
+
+y_pred=clf.predict(dtest)
+#y_pred=clf.predict_proba(dtest)
+
+print('ROC AUC {}'.format(roc_auc_score(test_Y, y_pred)))
+#ROC AUC 0.8420033677938177 - 10 rounds
+#ROC AUC 0.8606789199156557 - 50 rounds
+#ROC AUC 0.8889456436370466 - 200 rounds
+#ROC AUC 0.8979520526895398 - 350 rounds
+
+#without pca
+#ROC AUC 0.8588492325357053 - 10 rounds
+
+#without pca and without imputation run TO-DO: code cleanup if this works
+feature_importance=clf.get_score(importance_type='gain')
+feature_importance=pd.DataFrame(data={'feature':list(feature_importance.keys()),'importance':list(feature_importance.values())})
+feature_importance.sort_values(by='importance',ascending=False)
+filters=feature_importance[feature_importance.importance>10]['feature']
+filters.append(pd.Series('isFraud'))
+data1=data[filters.append(pd.Series('isFraud'))]
+train_X, test_X, train_Y, test_Y = train_test_split( data1.drop('isFraud',axis=1), data1['isFraud'], test_size=1/7.0, random_state=0)
+
 
 params = {'n_estimators':500,
     'max_depth':9,
@@ -96,13 +134,11 @@ partial_train_Y=train_Y[10000:]
 dtrain=xgb.DMatrix(partial_train_X,partial_train_Y)
 dval=xgb.DMatrix(val_X,val_Y)
 dtest=xgb.DMatrix(test_X)
-clf=xgb.train(params,dtrain,num_boost_round=350,early_stopping_rounds=50, evals=[(dtrain,'train'),(dval,'test')],verbose_eval=True)
+clf=xgb.train(params,dtrain,num_boost_round=10,early_stopping_rounds=50, evals=[(dtrain,'train'),(dval,'test')],verbose_eval=True)
 
 y_pred=clf.predict(dtest)
 #y_pred=clf.predict_proba(dtest)
 
 print('ROC AUC {}'.format(roc_auc_score(test_Y, y_pred)))
-#ROC AUC 0.8420033677938177 - 10 rounds
-#ROC AUC 0.8606789199156557 - 50 rounds
-#ROC AUC 0.8889456436370466 - 200 rounds
-#ROC AUC 0.8979520526895398 - 350 rounds
+#only important features as per all first model
+#ROC AUC 0.853398695139962 - 10 rounds
