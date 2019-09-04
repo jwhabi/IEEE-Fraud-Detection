@@ -35,10 +35,21 @@ for i in data.columns:
 #data.isnull().values.any()        
 data=data.drop('TransactionID',axis=1)
 
+#use if undersampling prior to split
+#indexes=list(data[data.isFraud==1].index)
+#
+#i2=random.sample(list(data[data.isFraud==0].index), len(indexes))
+#
+#indexes = indexes + i2
+#
+#data=data.loc[indexes]
+#
+#data.isFraud.value_counts()
 
-
-train_X, test_X, train_Y, test_Y = train_test_split( data.drop('isFraud',axis=1), data['isFraud'], test_size=1/7.0, random_state=0)
+train_X, test_X, train_Y, test_Y = train_test_split( data.drop('isFraud',axis=1), data['isFraud'], test_size=0.05, random_state=0)
 train_Y.value_counts()
+test_Y.value_counts()
+
 #changing: undersampling to happen before feature selection
 indexes=list(train_Y[train_Y==1].index)
 
@@ -51,7 +62,14 @@ train_Y=train_Y.loc[indexes]
 
 train_Y.hist()
 
-
+#feature scaling decreases score
+#mean = train_X.mean(axis=0)
+#train_X -= mean
+#std = train_X.std(axis=0)
+#train_X /= std
+#
+#test_X -= mean
+#test_X /= std
 
 params = {'n_estimators':500,
     'max_depth':9,
@@ -59,24 +77,37 @@ params = {'n_estimators':500,
     'subsample':0.9,
     'colsample_bytree':0.9,
     "eval_metric": "auc"}
-val_i=random.sample(list(train_Y.index), 5000)
+val_i=random.sample(list(train_Y.index), 1000)
+pt_i=list(set(train_X.index) - set(val_i))
 val_X=train_X.loc[val_i]
-partial_train_X=train_X.loc[val_i]
+partial_train_X=train_X.loc[pt_i]
 val_Y=train_Y.loc[val_i]
-partial_train_Y=train_Y.loc[val_i]
+partial_train_Y=train_Y.loc[pt_i]
 val_Y.hist()
 partial_train_Y.value_counts()
+
+#val_X=train_X[:1000]
+#partial_train_X=train_X[1000:]
+#val_Y=train_Y[:1000]
+#partial_train_Y=train_Y[1000:]
+
 
 dtrain=xgb.DMatrix(partial_train_X,partial_train_Y)
 dval=xgb.DMatrix(val_X,val_Y)
 dtest=xgb.DMatrix(test_X)
-clf=xgb.train(params,dtrain,num_boost_round=300,early_stopping_rounds=50, evals=[(dtrain,'train'),(dval,'test')],verbose_eval=True)
+clf=xgb.train(params,dtrain,num_boost_round=600,early_stopping_rounds=50, evals=[(dtrain,'train'),(dval,'test')],verbose_eval=True)
 
 y_pred=clf.predict(dtest)
 #y_pred=clf.predict_proba(dtest)
 
 print('ROC AUC {}'.format(roc_auc_score(test_Y, y_pred)))
 #ROC AUC 0.9010603919275391 - 300 rounds
+#ROC AUC 0.9474167644773602 - if undersample before split
+#ROC AUC 0.9491605651980637 - undersample after split (different split ratio)
+#ROC AUC 0.9515089718093055 - if undersample before split (ultra small test set)
+#ROC AUC 0.9508173314349682 - undersample after split and feature scaling
+
+#ROC AUC 0.9600422200727456 - undersample after split 600 iterations
 
 feature_importance=clf.get_score(importance_type='gain')
 feature_importance=pd.DataFrame(data={'feature':list(feature_importance.keys()),'importance':list(feature_importance.values())})
@@ -120,6 +151,46 @@ accuracy=accuracy.append([{'Accuracy':acu,'Recall Score': rec, 'Precision Score'
 for c in accuracy.columns:
     print(accuracy[c])
 
+
+
+
+"""Test data read and predict"""
+
+df1=pd.read_csv("C:\\Users\\jaideep.whabi\\ieee-fraud-detection\\test_transaction.csv")
+
+df2=pd.read_csv("C:\\Users\\jaideep.whabi\\ieee-fraud-detection\\test_identity.csv")
+
+data=pd.merge(df1,df2,how='left',on='TransactionID')
+
+del df1,df2
+
+for i in data.columns:
+    #data[i]=data[i].replace(np.nan,0) # uncomment if using pca
+    if(data[i].dtype=='object'):
+        print(i,data[i].dtype)
+        #data[i]=data[i].replace(np.nan,0)
+        data[i]=data[i].astype('category')
+        data[i]=data[i].cat.codes
+
+s_data=data.drop('TransactionID',axis=1)
+#s_data -= mean
+#s_data /= std
+
+dtest=xgb.DMatrix(s_data)
+
+y_pred=clf.predict(dtest)
+
+submit= pd.DataFrame(data={'TransactionID':data['TransactionID'],'isFraud':y_pred})
+submit.to_csv("C:\\Users\\jaideep.whabi\\ieee-fraud-detection\\submission5.csv",index=False)
+
+#submission 1 is undersampling prior to split with split ratio as 1/7.0... 
+#submission 2 is undersampling post split with split ratio as 0.05
+#submission 3 is undersampling prior to split with split ratio as 0.05
+#for submission 2 and 3 training data is same ~38k but test data for submission 3 is 
+#only 2000 rows.... and only a slightly better test result...check kaggle submission
+#submission 4 is undersampling after split with feature scaling
+#submission 5 is undersampling after split while training with 600 iterations.
+###################################################################
 
 #X=data.drop('isFraud',axis=1)
 #Y=data['isFraud']
