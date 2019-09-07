@@ -46,6 +46,20 @@ data=data.drop('TransactionID',axis=1)
 #
 #data.isFraud.value_counts()
 
+#pca for V columns
+vcols = [f'V{i}' for i in range(1,340)]
+
+sc = StandardScaler()
+
+pca = PCA(n_components=2) #0.99
+vcol_pca = pca.fit_transform(sc.fit_transform(data[vcols].fillna(-1)))
+
+data['_vcol_pca0'] = vcol_pca[:,0]
+data['_vcol_pca1'] = vcol_pca[:,1]
+data['_vcol_nulls'] = data[vcols].isnull().sum(axis=1)
+
+data.drop(vcols, axis=1, inplace=True)
+
 train_X, test_X, train_Y, test_Y = train_test_split( data.drop('isFraud',axis=1), data['isFraud'], test_size=0.05, random_state=0)
 train_Y.value_counts()
 test_Y.value_counts()
@@ -95,7 +109,8 @@ partial_train_Y.value_counts()
 dtrain=xgb.DMatrix(partial_train_X,partial_train_Y)
 dval=xgb.DMatrix(val_X,val_Y)
 dtest=xgb.DMatrix(test_X)
-clf=xgb.train(params,dtrain,num_boost_round=300,early_stopping_rounds=50, evals=[(dtrain,'train'),(dval,'test')],verbose_eval=True)
+clf=xgb.train(params,dtrain,num_boost_round=450,early_stopping_rounds=50, evals=[(dtrain,'train'),(dval,'test')],verbose_eval=True)
+clf.attributes()
 
 y_pred=clf.predict(dtest)
 #y_pred=clf.predict_proba(dtest)
@@ -108,6 +123,10 @@ print('ROC AUC {}'.format(roc_auc_score(test_Y, y_pred)))
 #ROC AUC 0.9508173314349682 - undersample after split and feature scaling
 
 #ROC AUC 0.9600422200727456 - undersample after split 600 iterations
+
+#ROC AUC 0.9497311138617524 - pca on v columns and then same stuff, 300 iter
+#ROC AUC 0.9541357072760409 - pca on v then 450 iter
+#ROC AUC 0.9546193042881589 - pca on v then 500 iter
 """
 feature_importance=clf.get_score(importance_type='gain')
 feature_importance=pd.DataFrame(data={'feature':list(feature_importance.keys()),'importance':list(feature_importance.values())})
@@ -171,13 +190,15 @@ lgb_eval = lgb.Dataset(val_X,val_Y, reference=lgb_train)
 lgb_test = lgb.Dataset(test_X)
 clf = lgb.train(params,
                 lgb_train,
-                num_boost_round=300,
-                valid_sets=lgb_eval,
-                early_stopping_rounds=20)
+                num_boost_round=450,
+                valid_sets=lgb_eval)#,
+                #early_stopping_rounds=20)
 
 y_pred=clf.predict(test_X)
 print('ROC AUC {}'.format(roc_auc_score(test_Y, y_pred)))
 #ROC AUC 0.9397014160949145 - 300 rounds lgbm
+#ROC AUC 0.9377951724133072 - pca on v columns then lgbm
+#ROC AUC 0.9574895013409965 - pca on v not undersample
 
 """Test data read and predict"""
 
@@ -200,13 +221,21 @@ for i in data.columns:
 s_data=data.drop('TransactionID',axis=1)
 #s_data -= mean
 #s_data /= std
+vcol_pca = pca.transform(sc.fit_transform(s_data[vcols].fillna(-1)))
+
+s_data['_vcol_pca0'] = vcol_pca[:,0]
+s_data['_vcol_pca1'] = vcol_pca[:,1]
+s_data['_vcol_nulls'] = data[vcols].isnull().sum(axis=1)
+
+s_data.drop(vcols, axis=1, inplace=True)
+
 
 #dtest=xgb.DMatrix(s_data)
 
 y_pred=clf.predict(s_data)
 
 submit= pd.DataFrame(data={'TransactionID':data['TransactionID'],'isFraud':y_pred})
-submit.to_csv("C:\\Users\\jaideep.whabi\\ieee-fraud-detection\\submission7.csv",index=False)
+submit.to_csv("C:\\Users\\jaideep.whabi\\ieee-fraud-detection\\submission10.csv",index=False)
 
 #submission 1 is undersampling prior to split with split ratio as 1/7.0... 
 #submission 2 is undersampling post split with split ratio as 0.05
@@ -217,6 +246,8 @@ submit.to_csv("C:\\Users\\jaideep.whabi\\ieee-fraud-detection\\submission7.csv",
 #submission 5 is undersampling after split while training with 600 iterations.
 #submission6 same as submission2 but 300 iterations of xgboost
 #submission7 is lgbm 300 iterations
+#submission 8 is pca on vs, undersample then 450 xgboost
+#submission 9 is pca on vs , undersample the 500 pca
 ###################################################################
 
 #
