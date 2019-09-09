@@ -544,7 +544,7 @@ submission['TransactionID'] = X_test_id
 submission['isFraud'] = sub_preds
 submission.to_csv("C:\\Users\\jaideep.whabi\\ieee-fraud-detection\\submission11.csv", index=False)
 
-#filename = 'C:\\Users\\PMishra\\Downloads\\ieee-fraud-detection\\model6.sav'
+#filename = #insert file path and name here
 #pickle.dump(clf, open(filename, 'wb'))
  
 # some time later...
