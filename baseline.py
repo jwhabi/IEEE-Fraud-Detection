@@ -248,6 +248,11 @@ submit.to_csv("C:\\Users\\jaideep.whabi\\ieee-fraud-detection\\submission10.csv"
 #submission7 is lgbm 300 iterations
 #submission 8 is pca on vs, undersample then 450 xgboost
 #submission 9 is pca on vs , undersample the 500 pca
+#submission 10 is pca on vs, no undersampling, lgbm 450 rounds
+#submission 11 is first trial new approach after eda, adding new features
+# submission 12 is new approach with undersampling and 500 rounds of lgbm
+#submission 13 is new approach with undersampling and val data added for 1500 lgbm rounds
+# submission 14 same as 13 but 3000 rounds with early stopping at 2655
 ###################################################################
 
 #
